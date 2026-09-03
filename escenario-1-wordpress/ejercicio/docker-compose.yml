@@ -1,0 +1,75 @@
+# Versión del formato de Compose. 3.8 es compatible con Docker Compose v1 y v2.
+version: '3.8'
+
+services:
+
+  # ── Servicio 1: Base de datos ────────────────────────────────
+  db:
+    image: mariadb:10.11        # Fork de MySQL, versión fija (nunca "latest" en algo con datos)
+    container_name: mi_wordpress_db
+    restart: always             # Si el contenedor se cae, Docker lo vuelve a levantar solo
+    environment:
+      # Estas variables las lee la imagen de MariaDB al arrancar por primera vez
+      # para crear el usuario root, la base y el usuario de la app.
+      # Los valores reales viven en tu archivo .env (nunca aquí en texto plano).
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+    volumes:
+      # Volumen con nombre: los datos de MySQL viven fuera del contenedor.
+      # Si el contenedor se borra, la base sigue existiendo en este volumen.
+      - mi_wordpress_data:/var/lib/mysql
+    networks:
+      # Al compartir esta red con los otros dos servicios, "db" se vuelve
+      # un nombre de host resoluble por Docker (DNS interno), no una IP fija.
+      - mi_red_wordpress
+
+  # ── Servicio 2: Administrador web de la base de datos ────────
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: mi_phpmyadmin
+    restart: always
+    ports:
+      # host:contenedor → localhost:8081 en tu navegador llega al puerto 80 interno
+      - "8081:80"
+    environment:
+      PMA_HOST: db              # "db" = nombre del servicio de arriba, resuelto por la red interna
+      PMA_USER: ${MARIADB_USER}
+      PMA_PASSWORD: ${MARIADB_PASSWORD}
+    depends_on:
+      - db
+    networks:
+      - mi_red_wordpress
+
+  # ── Servicio 3: WordPress ─────────────────────────────────────
+  wordpress:
+    image: wordpress:latest
+    container_name: mi_wordpress_app
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306      # host:puerto interno de MySQL/MariaDB
+      WORDPRESS_DB_NAME: ${MARIADB_DATABASE}
+      WORDPRESS_DB_USER: ${MARIADB_USER}
+      WORDPRESS_DB_PASSWORD: ${MARIADB_PASSWORD}
+    volumes:
+      # Volumen SEPARADO del de la base de datos: aquí van los archivos
+      # de WordPress (plugins, temas, uploads), no los datos de MySQL.
+      - mi_wordpress_files:/var/www/html
+    depends_on:
+      - db
+    networks:
+      - mi_red_wordpress
+
+# Volúmenes con nombre: Docker los gestiona y persisten aunque borres los contenedores.
+# Solo desaparecen si corres "docker-compose down -v" (la -v es la que borra datos).
+volumes:
+  mi_wordpress_data:
+  mi_wordpress_files:
+
+# Red interna compartida entre los tres servicios (bridge = red aislada local).
+networks:
+  mi_red_wordpress:
+    driver: bridge

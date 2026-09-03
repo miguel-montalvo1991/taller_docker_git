@@ -1,0 +1,17 @@
+# Variables de entorno (nunca se suben con datos reales)
+.env
+.env.local
+
+# Dependencias
+node_modules/
+
+# Datos de Docker si se montan como bind mount local
+**/data/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
