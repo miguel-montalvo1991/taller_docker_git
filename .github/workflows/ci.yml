@@ -1,12 +1,22 @@
-name: CI
-on: [push]
+name: CI  # Nombre del workflow, aparece en la pestaña "Actions" de GitHub
+
+on: [push]  # Se dispara en cada push, a cualquier rama
+
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  test:  # Nombre del job (puedes llamarlo distinto si quieres)
+    runs-on: ubuntu-latest  # Máquina virtual donde corre: Ubuntu más reciente
+
     steps:
       - uses: actions/checkout@v4
+        # Descarga el código de tu repo dentro de la máquina virtual
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+        # Instala Python 3.12 en la VM
+
       - run: pip install flask pytest
+        # Instala las dependencias necesarias para correr la app y las pruebas
+
       - run: pytest miniblog/test_app.py
+        # Ejecuta las pruebas del proyecto miniblog
